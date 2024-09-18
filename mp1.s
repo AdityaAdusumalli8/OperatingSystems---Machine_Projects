@@ -71,7 +71,7 @@ remove_star:
 	
 remove_star_loop:
 	bge t3,t1, remove_star_exit
-	slii t4,t3, 4
+	slli t4,t3, 4
 	add t5, t2,t4
 	
 	lh t6, 0(t5)
@@ -141,5 +141,164 @@ next_row:
 draw_star_exit:
 	ret
 	
+#
+	.section .text
+	.global add_window
+	.type add_window, @function
+	
+add_window:
+	li a0,16
+	call malloc
+	
+	beqz a0, add_window_exit
+	
+	sh a1, 8(a0)
+	sh a2, 10(a0)
+	sb a3, 12(a0)
+	sb a4, 13(a0)
+	sh a5, 14(a0)
+	
+	la t0, skyline_win_list
+	ld t1, 0(t0)
+	sd t1, 0(a0)
+	
+	sd a0, 0(t0)
+add_window_exit:
+	ret
+	
+#
+	.section .text
+	.global remove_window
+	.type remove_window, @function
+remove_window:
+	la t0, skyline_win_list
+	ld t1, 0(t0)
+	beqz t1, remove_window_exit
+	
+	li t2, 0
+remove_window_loop:
+	beqz t1, remove_window_exit
+	lh t3, 8(t1)
+	lh t4, 10(t1)
+	
+	bne t3,a0, check_next_window
+	bne t4, a1, check_next_window
+	
+	beqz t2, remove_head
+	
+	ld t5, 0(t1)
+	sd t5, 0(t2)
+	j free_memory
+	
+remove_head:
+	ld t5, 0(t1)
+	sd t5, 0(t0)
+	j free_memory
+	
+check_next_window:
+	addi t2,t1, 0
+	ld t1, 0(t1)
+	j remove_window_loop
+
+free_memory:
+	mv a0,t1
+	call free
+remove_window_exit:
+	ret
+
+#
+	.section .text
+	.global draw_window
+	.type draw_window, @function
+draw_window:
+	lh t0, 8(a1)
+	lh t1, 10(a1)
+	lb t2, 12(a1)
+	lb t3, 13(a1)
+	lh t4, 14(a1)
+	
+	li t5, SKYLINE_WIDTH
+	li t6, SKYLINE_HEIGHT
+	
+	li t7, 0
+draw_window_row:
+	bge t7,t3, draw_window_exit
+	li t8,0
+draw_window_col:
+	bge t8,t2,next_row
+	add t9,t0,t8
+	add t10, t1, t7
+	
+	bgeu t9,t5,next_pixel
+	bgeu t10,t6, next_pixel
+	mul t11, t10, t5
+	add t11, t11, t9
+	slli t11, t11, 1
+	
+	add t12, a0, t11
+	sh t4, 0(t12)
+	
+next_pixel:
+	addi t8,t8, 1
+	j draw_window_col
+
+next_row:
+	addi t7,t7,1
+	j draw_window_row
+draw_window_exit:
+	ret
+	
+#
+	.section .text
+	.global draw_beacon
+	.type draw_beacon, @function
+	
+draw_function:
+	lh t0, 14(a2)
+	lh t1, 16(a2)
+	
+	remu t2,a1,t0
+	
+	bgeu t2,t1, draw_beacon_exit
+	
+	lh t3, 8(a2)
+	lh t4, 10(a2)
+	lb t5, 12(a2)
+	
+	ld t6, 0(a2)
+	
+	li t7, SKYLINE_WIDTH
+	li t8, SKYLINE_WIDTH
+	
+	li t9, 0
+	li t10,0
+draw_beacon_row:
+	bge t9,t5, draw_beacon_exit
+	li t10, 0
+draw_beacon_col:
+	bge t10, t5, next_row
+	add t11, t3,t10
+	add t12, t4,t9
+	
+	bgeu t11, t7, skip_pixel
+	bgeu t12, t8, skip_pixel
+	
+	mul t13,t12, t7
+	add t13, t13,t11
+	slli t13,t13,1
+	
+	lhu t14, 0(t6)
+	addi t6,t6,2
+	
+	add t15,a0, t13
+	sh t14, 0(t15)
+skip_pixel:
+	addi t10,t10, 1
+	j draw_beacon_col
+next_row:
+	addi t9,t9,1
+	j draw_beacon_row
+draw_beacon_exit:
+	ret
 
 	
