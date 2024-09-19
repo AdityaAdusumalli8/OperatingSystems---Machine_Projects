@@ -10,6 +10,7 @@
         .global start_beacon
         .type   start_beacon, @function
 
+
 start_beacon:
 
         la t0, skyline_beacon             # Load address of skyline_beacon into t0 (t0 is 64-bit)
@@ -29,7 +30,7 @@ start_beacon:
 
         ret                               # Return to caller
 
-        .end
+        
         
 #
 	.section .text
@@ -58,9 +59,7 @@ add_star_exit:
 	ret
 	
 #
-	.section .text
-	.global remove_star
-	.type remove_star, @function
+
 remove_star:
 	la t0, skyline_star_cnt
 	lh t1,0(t0)
@@ -106,9 +105,7 @@ remove_star_exit:
 	ret
 	
 #
-	.section .text
-	.global draw_star
-	.type draw_star, @function
+	
 draw_star:
 	lh t0, 0(a1)
 	lh t1, 2(a1)
@@ -142,9 +139,7 @@ draw_star_exit:
 	ret
 	
 #
-	.section .text
-	.global add_window
-	.type add_window, @function
+	
 	
 add_window:
 	li a0,16
@@ -167,9 +162,7 @@ add_window_exit:
 	ret
 	
 #
-	.section .text
-	.global remove_window
-	.type remove_window, @function
+	
 remove_window:
 	la t0, skyline_win_list
 	ld t1, 0(t0)
@@ -207,9 +200,7 @@ remove_window_exit:
 	ret
 
 #
-	.section .text
-	.global draw_window
-	.type draw_window, @function
+	
 draw_window:
 	lh t0, 8(a1)
 	lh t1, 10(a1)
@@ -249,9 +240,7 @@ draw_window_exit:
 	ret
 	
 #
-	.section .text
-	.global draw_beacon
-	.type draw_beacon, @function
+	
 	
 draw_function:
 	lh t0, 14(a2)
@@ -300,5 +289,7 @@ next_row:
 	j draw_beacon_row
 draw_beacon_exit:
 	ret
+	
+	.end
 
 	
