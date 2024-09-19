@@ -18,6 +18,17 @@ void main(void){
 
    console_printf("star color: %x\n ", skyline_win_list);
    add_window(0,0,10,10, 0xbeef);
+   add_window(1,0,10,10, 0xbeec);
+   add_window(5,10,10,10, 0xcdef); 
+   add_window(10,10,10,10, 0xbeed);
    console_printf("star color: %x\n ", skyline_win_list-> color);
+
+   remove_window(1,0);
+   remove_window(10,10);
+      struct skyline_window * win=skyline_win_list;
+      win=win->next;
+   console_printf("star color: %x\n ", skyline_win_list-> color);
+   console_printf("star color: %x\n ", win-> color);
+   
 }
 

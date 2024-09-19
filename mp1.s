@@ -30,11 +30,14 @@
         .global draw_star
         .type draw_star, @function
         
-        
         .global draw_window
         .type draw_window, @function
           
-          
+        
+        .global remove_window
+        .type remove_window, @function
+        
+
         .global add_window
         .type add_window, @function
 
@@ -203,7 +206,9 @@ add_window_exit:
           
 #
 remove_window:
-          la t0, skyline_win_list       # Load address of window linked list into t0
+        addi sp, sp, -8
+        sd ra, 0(sp)
+        la t0, skyline_win_list       # Load address of window linked list into t0
           ld t1, 0(t0)                    # Load head of list into t1
           beqz t1, remove_window_exit   # If head of list is emtpy then exit
           
@@ -237,6 +242,8 @@ check_next_window:
           j remove_window_loop
 
 remove_window_exit:
+        ld ra, 0(sp)
+        addi sp,sp,8
           ret
 
 #
