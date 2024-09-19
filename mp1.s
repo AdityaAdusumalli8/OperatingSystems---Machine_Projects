@@ -3,8 +3,8 @@
         .section .data                    # Data section (optional for global data)
         .extern skyline_beacon             # Declare the external global variable
 
-        .global skyline_star_cnd
-        .type   skyline_star_cnd, @object
+        .global skyline_star_cnt
+        .type   skyline_star_cnt, @object
 
         .text
         .global start_beacon
@@ -16,6 +16,20 @@
 
 		.global remove_star
 		.type remove_star, @function
+
+		.global draw_star
+		.type draw_star, @function
+		.equ SKYLINE_WIDTH, 640
+
+		.global add_window
+		.type add_window, @function
+
+		.global remove_window
+		.type remove_window, @function
+
+		.global draw_window
+		.type draw_window, @function
+		.equ SKYLINE_HEIGHT, 480
 
 
 
@@ -122,144 +136,156 @@ remove_star_next:
 	
 
 #
-	.section .text
-	.global draw_star
-	.type draw_star, @function
+
 draw_star:
-	lh t0, 0(a1)
-	lh t1, 2(a1)
-	lb t2, 4(a1)
-	lh t3, 6(a1)
+
+	# Load the star's fields
+	lh t0, 0(a1)  # x-coord
+	lh t1, 2(a1)	# y-coord
+	lb t2, 4(a1)	# diameter
+	lh t3, 5(a1)	# color
 	
-	li t4, 640
-	mul t5, t1,t4
+	li t5, 0 	# Row Counter
 	
-	add t5,t5,t0
-	slli t5,t5,1
-	
-	add t6,a0,t5
-	li t7,0
 draw_star_row:
-	bge t7,t2, draw_star_exit
-	li  t8, 0
+	bge t5,t2, draw_star_exit		# If Row Counter >= diameter, then exit
+	li  t4, 0						# Column counter
 draw_star_col:
-	bge t8, t2, next_row
-	sh t3, 0(t6)
-	addi t6,t6,2
+	bge t4, t2, draw_next_row			# If Col Counter >= diameter, then go next row
+
+	# Calculate pixel coordinates ((x+i) + (y+j)*640) *2
+	add a3, t0, t4
+	add a4, t1, t5
+	mul a5, a4, SKYLINE_WIDTH
+	add a5, a5, a3
+	slli a5,a5,1
 	
-	addi t8,t8,1
+	# Calculate the address in frame buffer and store color 
+	add a6, a0, a5
+	sh t3, 0(a6)
+
+	# Increment col counter
+	addi t4,t4,1
 	j draw_star_col
 
-next_row:
-	add t6,t6,t4
-	addi t7,t7,1
+draw_next_row:
+	# Increment row
+	addi t5,t5,1
 	j draw_star_row
 draw_star_exit:
 	ret
 	
 #
-	.section .text
-	.global add_window
-	.type add_window, @function
 	
 add_window:
+	# Save arguments into temp registers before the malloc
+	mv t1, a0
+	mv t2, a1
+	mv t3, a2
+	mv t4, a3
+	mv t5, a4
+
+	# Allocate memory for the register
 	li a0,16
 	call malloc
 	
+	# If allocation failed, then exit
 	beqz a0, add_window_exit
 	
-	sh a1, 8(a0)
-	sh a2, 10(a0)
-	sb a3, 12(a0)
-	sb a4, 13(a0)
-	sh a5, 14(a0)
+	# Store window data into new struct
+	sh t1, 8(a0)
+	sh t2, 10(a0)
+	sb t3, 12(a0)
+	sb t4, 13(a0)
+	sh t5, 14(a0)
 	
-	la t0, skyline_win_list
-	ld t1, 0(t0)
-	sd t1, 0(a0)
-	
-	sd a0, 0(t0)
+	# Add window to linkedlist
+	la t0, skyline_win_list		# Load address of linkedlist
+	ld t1, 0(t0)				# Load current first window to t1
+	sd t1, 0(a0)				# Set the next pointer of new window to current first window address 
+	sd a0, 0(t0)				# Update the head of list to new window
 add_window_exit:
 	ret
 	
 #
-	.section .text
-	.global remove_window
-	.type remove_window, @function
 remove_window:
-	la t0, skyline_win_list
-	ld t1, 0(t0)
-	beqz t1, remove_window_exit
+	la t0, skyline_win_list		# Load address of window linked list into t0
+	ld t1, 0(t0)		# Load head of list into t1
+	beqz t1, remove_window_exit		# If head of list is emtpy then exit
 	
-	li t2, 0
+	li t2, 0			# Initialize a previous pointer
 remove_window_loop:
-	beqz t1, remove_window_exit
-	lh t3, 8(t1)
-	lh t4, 10(t1)
+	beqz t1, remove_window_exit # If head of linked list is empty then we exit
+	lh t3, 8(t1)		# Load x-coord of current window into t3
+	lh t4, 10(t1)		# Load y-coord of current window into t3
 	
+	# Compare x and y with function arguments. If x and y dont match, then go to next window. 
 	bne t3,a0, check_next_window
 	bne t4, a1, check_next_window
 	
-	beqz t2, remove_head
-	
+	# If matching window is found, then remove it from the linked list. 
 	ld t5, 0(t1)
+	beqz t2, remove_window_head
+
+	# Set the next pointer of prev window to the next of current window
 	sd t5, 0(t2)
-	j free_memory
+	j free_memory_window
 	
-remove_head:
-	ld t5, 0(t1)
-	sd t5, 0(t0)
-	j free_memory
-	
+remove_window_head:
+	sd t5,0(t0)
+free_memory_window:
+	mv a0,t1
+	call free
+	j remove_window_exit
 check_next_window:
-	addi t2,t1, 0
+	mv t2,t1
 	ld t1, 0(t1)
 	j remove_window_loop
 
-free_memory:
-	mv a0,t1
-	call free
 remove_window_exit:
 	ret
 
 #
-	.section .text
-	.global draw_window
-	.type draw_window, @function
+	
 draw_window:
+	# Load window coord, size, color into temp
 	lh t0, 8(a1)
 	lh t1, 10(a1)
 	lb t2, 12(a1)
 	lb t3, 13(a1)
 	lh t4, 14(a1)
 	
-	li t5, SKYLINE_WIDTH
-	li t6, SKYLINE_HEIGHT
-	
-	li t7, 0
+	li t5, 0 # Initialize row counter
+
 draw_window_row:
-	bge t7,t3, draw_window_exit
-	li t8,0
+	bge t5,t3, draw_window_exit
+	li a2,0	# Reset col counter
 draw_window_col:
-	bge t8,t2,next_row
-	add t9,t0,t8
-	add t10, t1, t7
+	bge a2,t2, draw_window_next_row
+
+	# Calculate pixel coordinates
+	add a4,t0,a2
+	add a5, t1, t5
 	
-	bgeu t9,t5,next_pixel
-	bgeu t10,t6, next_pixel
-	mul t11, t10, t5
-	add t11, t11, t9
-	slli t11, t11, 1
+	# Ensure pixel is within window boundaries
+	bgeu a4,SKYLINE_WIDTH, draw_window_skip_pixel
+	bgeu a5,SKYLINE_HEIGHT, draw_window_skip_pixel
+
+	# Calculate offset in frame buffer
+	mul a6, a5, SKYLINE_WIDTH
+	add a6, a6, a4
+	slli a6, a6, 1
 	
-	add t12, a0, t11
-	sh t4, 0(t12)
+	# Set pixel color in the fram buffer
+	add a6, a6, a0
+	sh t4, 0(a6)
 	
-next_pixel:
-	addi t8,t8, 1
+draw_window_skip_pixel:
+	addi a2,a2, 1	# Increment column
 	j draw_window_col
 
-next_row:
-	addi t7,t7,1
+draw_window_next_row:
+	addi t5,t5,1
 	j draw_window_row
 draw_window_exit:
 	ret
