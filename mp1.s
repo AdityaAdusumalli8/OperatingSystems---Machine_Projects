@@ -10,6 +10,15 @@
         .global start_beacon
         .type   start_beacon, @function
 
+		.global add_star
+		.type add_star, @function
+		.equ SKYLINE_STARS_MAX, 1000
+
+		.global remove_star
+		.type remove_star, @function
+
+
+
 start_beacon:
 
         la t0, skyline_beacon             # Load address of skyline_beacon into t0 (t0 is 64-bit)
@@ -29,82 +38,89 @@ start_beacon:
 
         ret                               # Return to caller
 
-        .end
+        
         
 #
-	.section .text
-	.global add_star
-	.type add_star, @function
-	
+
 add_star:
-	la t0, skyline_star_cnt
-	li t1, SKYLINE_STARS_MAX
-	lh t2, 0(t0)
+	la t0, skyline_star_cnt		# Load the address of global var skyline_star_cnt
+	lh t2, 0(t0)				# Load the 16bit count into t2
+	li t1, SKYLINE_STARS_MAX	# Load the immediate value of 1000 into t1 (max # of stars)
 	
-	bge t2,t1,add_star_exit
+	# Check for space in array
+	bge t2,t1,add_star_exit		# If current star count is bigger or equal to max, exit
 	
-	la t3, skyline_stars
-	slli t2,t2,4
-	add t3,t3,t2
+	# Calculate Address of the new star in array if space exists
+	la t3, skyline_stars	# Load base address of array into t3
+	li t5, 7
+	mul t2, t2, t5			# Multiply star count by 7 (bytes in struct) memory is byte-addressable
+	add t3,t3,t2		# Add this offset to base address of array to get new location
 	
-	sh a0, 0(t3)
-	sh a1, 2(t3)
-	sh a2, 6(t3)
+	sh a0, 0(t3)	# Store x-coord 
+	sh a1, 2(t3)	# Store y-coord 
+	sh a2, 5(t3)	# Store color
 	
-	lh t4, 0(t0)
-	addi t4,t4,1
-	sh t4, 0(t0)
+	lh t2, 0(t0)	# Load star count back into t2
+	addi t2,t2,1	# Increment count
+	sh t2, 0(t0)	# Store star count back into memory address
 add_star_exit:
-	ret
+	ret				# Return
 	
 #
-	.section .text
-	.global remove_star
-	.type remove_star, @function
-remove_star:
-	la t0, skyline_star_cnt
-	lh t1,0(t0)
-	beqz t1, remove_star_exit
 	
-	la t2, skyline_stars
-	li t3, 0
+remove_star:
+	la t0, skyline_star_cnt		# Load address of count into skyline_star_cnt
+	lh t1,0(t0)					# Load star count into t1
+	beqz t1, remove_star_exit	# If star count is 0, nothing to remove and exit
+	
+	la t2, skyline_stars		# Load array base address into t2
+	li t3, 0					# Load 0 to t3 as index
 	
 remove_star_loop:
-	bge t3,t1, remove_star_exit
-	slli t4,t3, 4
-	add t5, t2,t4
+	bge t3,t1, remove_star_exit		# If index >= star count, exit loop
+	li t4, 7				# Calculate address of current star
+	mul t5, t3, t4			
+	add t5, t2,t5
 	
-	lh t6, 0(t5)
-	lh t7, 2(t5)
+	lh t4, 0(t5)		# Load x value into t4
+	lh t5, 2(t5)		# Load y value into t5
 	
-	bne t6, a0, remove_star_next
-	bne t7, a1, remove_star_next
+	bne t4, a0, remove_star_next 	# Compare current x value with a0; if not equal go to next
+	bne t5, a1, remove_star_next	# Compare current y value with a1; if not equal go to next
 	
-	addi t1,t1,-1
-	sh t1,0(t0)
+	# Star found
+	addi t1,t1,-1		# If x and y are equal to arguments, decrement star count
+	beq t3,t1, remove_star_update 	# If star found is last one, no swap
+
+	li t4,7		# Calculate offset for last star
+	mul t4, t1, t4
+	add t5 , t2, t4 	# Calculate address of last star
 	
-	beq t3,t1, remove_star_exit
+	li t4,7
+	mul t3 , t3, t4
+	add t3, t2, t3		# Calculate address of current star
+
+	# Copy x,y,color
+	lh t4, 0(t5)
+	sh t4, 0(t3)
 	
-	slli t4,t1,4
-	add t6,t2,t4
+	lh t4, 2(t5)
+	sh t4, 2(t3)
 	
-	lh t7, 0(t6)
-	sh t7, 0(t5)
+	lh t4, 5(t5)
+	sh t4, 5(t3)
 	
-	lh t7, 2(t6)
-	sh t7, 2(t5)
-	
-	lh t7, 6(t6)
-	sh t7, 6(t5)
-	
-	j remove_star_exit
-	
+remove_star_update:
+	# Store updated star count to memory
+	sh t1, 0(t0)
+remove_star_exit:
+	ret
 remove_star_next:
 	add t3,t3,1
 	j remove_star_loop
-remove_star_exit:
-	ret
+
 	
+
 #
 	.section .text
 	.global draw_star
@@ -300,5 +316,7 @@ next_row:
 	j draw_beacon_row
 draw_beacon_exit:
 	ret
+
+	.end
 
 	
