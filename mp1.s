@@ -20,27 +20,31 @@
         .equ SKYLINE_WIDTH, 640
         .equ SKYLINE_HEIGHT, 480
 
+        .global add_star
+        .type add_star, @function
 
         .global remove_star
         .type remove_star, @function 
 
-        .global add_star
-        .type add_star, @function
 
         .global draw_star
         .type draw_star, @function
         
-        .global draw_window
-        .type draw_window, @function
+        .global add_window
+        .type add_window, @function
           
         
         .global remove_window
         .type remove_window, @function
         
 
-        .global add_window
-        .type add_window, @function
+        .global draw_window
+        .type draw_window, @function
 
+        .global draw_beacon
+        .type draw_beacon, @function
+
+        
 
        
           
@@ -293,5 +297,65 @@ draw_window_next_row:
         j draw_window_row
 draw_window_exit:
         ret
+
+draw_beacon:
+        addi sp,sp, -8
+        sd ra, 0(sp)
+
+        # Load beacon's arguments to temp registers
+        ld t0, 0(a2)
+        lh t1, 8(a2)
+        lh t2, 10(a2)
+        lb t3, 12(a2)
+        lh t4, 14(a2)
+        lh t5, 16(a2)
+
+        # Determine whether beacon on/off
+        remu a3, a1, t4
+        bgeu a3, t5, draw_beacon_exit
+
+        # Initialize row counter for beacon drawing
+        li a4, 0
+draw_beacon_row:
+        bge a4, t3, draw_beacon_exit
+
+        # Initialize col counter
+        li a5,0
+draw_beacon_col:
+        bge a5, t3, draw_beacon_next_row
+        # Calculate the pixel coordinates
+        add a6, t1, a5
+        add a7, t2, a4
+
+        li t4, SKYLINE_HEIGHT
+        li t5, SKYLINE_WIDTH
+        bgeu a6, t5, beacon_skip
+        bgeu a7, t4, beacon_skip
+
+        # Calculate the offset for frame buffer
+        mul t5, t5, a7
+        add t5, t5, a6
+        slli t5,t5,1
+
+        # Add base frame buffer address to get final address
+        add t5, t5, a0
+
+        # Set pixel color from beacon's pointer
+        lh a7, 0(t0)
+        sh a7, 0(t5)
+
+        addi t0,t0,2
+beacon_skip:
+        addi a5,a5,1
+        j draw_beacon_col
+draw_beacon_next_row:
+        addi a4,a4,1
+        j draw_beacon_row
+draw_beacon_exit:
+        ld ra,0(sp)
+        addi sp, sp, 8
+        ret
+
+
 
         .end
