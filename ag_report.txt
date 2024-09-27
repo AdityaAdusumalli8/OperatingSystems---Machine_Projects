@@ -9,26 +9,21 @@ PASS
 PASS
 
 >---------<test_add_window>-----------------------[0/10]
-FAIL: Window(x=173,y=426,w=0,h=0,c=0) not found
+FAIL: Window(x=448,y=38,w=4,h=2,c=0) not found
 
 
-INFO:    Cleanup error: while stopping driver for /var/lib/apptainer/mnt/session/rootfs: squashfuse_ll exited: fuse: reading device: Software caused connection abort
 >---------<test_remove_window>--------------------[15/15]
 PASS
 
->---------<test_draw_window>----------------------[0/10]
-FAIL: memory outside buf overwritten
-
+>---------<test_draw_window>----------------------[10/10]
+PASS
 
 >---------<test_start_beacon>---------------------[0/0]
 PASS
 
->---------<test_draw_beacon>----------------------[0/15]
-FAIL: Beacon (x=637, y=477, dia=4 (truncated)) pixels in wrong location
-FAIL: memory outside buf written
-FAIL: beacon on for 0 frames in 20-frame period, expected 10 frames
+>---------<test_draw_beacon>----------------------[15/15]
+PASS
 
-
-Total Score: 45/80 = 56.25%Style Point : 20 / 20
+Total Score: 70/80 = 87.5%Style Point : 20 / 20
 Staff Comments :
   
