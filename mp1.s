@@ -197,7 +197,7 @@ draw_star:
 # Arguments: a0 - x coord, a1 - y coord, a3 - window width, a4 - window height, a5 = color
 add_window:
         # Save return adress
-        addi sp,sp, -28
+        addi sp,sp, -16
         sd ra, 0(sp)
         # Save arguments into temp registers before the malloc
         mv t1, a0
@@ -206,11 +206,11 @@ add_window:
         mv t4, a3
         mv t5, a4
 
-        sw t1, 8(sp)
-        sw t2, 12(sp)
-        sw t3, 16(sp)
-        sw t4, 20(sp)
-        sw t5, 24(sp)
+        sh t1, 8(sp)
+        sh t2, 10(sp)
+        sb t3, 12(sp)
+        sb t4, 13(sp)
+        sh t5, 14(sp)
 
         # Allocate memory for the window
         li a0,16                # 16 byte structure
@@ -220,17 +220,17 @@ add_window:
         bnez a0, add_window_continue
 
         ld ra, 0(sp)
-        addi sp,sp,28
+        addi sp,sp,16
         ret
 
 add_window_continue:
 
-        lwu t1, 8(sp)
-        lwu t2, 12(sp)
-        lwu t3, 16(sp)
-        lwu t4, 20(sp)
-        lwu t5, 24(sp)
-        
+        lhu t1, 8(sp)
+        lhu t2, 10(sp)
+        lbu t3, 12(sp)
+        lbu t4, 13(sp)
+        lhu t5, 14(sp)
+
         # Store window data into new struct
         sh t1, 8(a0)
         sh t2, 10(a0)
@@ -245,7 +245,7 @@ add_window_continue:
         sd a0, 0(t0)                  # Update the head of list to new window
 
         ld ra, 0(sp)
-        addi sp,sp,28
+        addi sp,sp,16
         ret
           
 # This function removes a window of specified position if exists. If window exists, remove from linked list and free. 
