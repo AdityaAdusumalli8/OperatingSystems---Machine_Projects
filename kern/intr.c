@@ -109,6 +109,7 @@ void extern_intr_handler(void) {
         panic("unhandled irq");
     
     // FIXME your code goes here
+    isrtab[irqno].isr(irqno, isrtab[irqno].isr_aux );
 
     plic_close_irq(irqno);
 }

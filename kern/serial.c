@@ -137,22 +137,62 @@ char com0_getc(void) {
 
 void com1_init(void) {
     // FIXME your code goes here
+    rbuf_init(&uart1_rxbuf);
+    rbuf_init(&uart1_txbuf);
+    UART1.lcr = LCR_DLAB;
+    UART1.dll = 0x01;
+    UART1.dlm = 0x00;
+    UART1.lcr = 0x03;
+
+    UART1.rbr;
+    UART1.ier = IER_DRIE;
+    intr_register_isr(UART1_IRQNO,1,uart1_isr,NULL );
+    plic_enable_source_for_context(0, UART1_IRQNO);
+    com1_initialized =1;
 }
 
 void com1_putc(char c) {
     // FIXME your code goes here
+    rbuf_wait_not_full(&uart1_txbuf);
+    rbuf_put(&uart1_txbuf,c);
+    UART1.ier |= IER_THREIE;
 }
 
 char com1_getc(void) {
     // FIXME your code goes here
+    rbuf_wait_not_empty(&uart1_rxbuf);
+    char c = rbuf_get(&uart1_rxbuf);
+    UART1.ier |= IER_DRIE;
+    return c;
+
 }
 
 static void uart1_isr (int irqno, void * aux) {
     const uint_fast8_t line_status = UART1.lsr;
 
     if (line_status & LSR_OE)
+    {
         panic("Receive buffer overrun");
-    
+    }
+
+    if (line_status & LSR_DR){
+        if (!rbuf_full(&uart1_rxbuf)){
+            char recieved_char = UART1.rbr;
+            rbuf_put(&uart1_rxbuf, recieved_char);
+        }
+        else{
+            UART1.ier &= ~IER_DRIE;
+        }
+    }
+    if (line_status & LSR_THRE){
+        if (!rbuf_empty(&uart1_txbuf)){
+            UART1.thr = rbuf_get(&uart1_txbuf);
+        }
+        else{
+            UART1.ier &= ~IER_THREIE;
+        }
+    }
+
     // FIXME your code goes here
 }
 

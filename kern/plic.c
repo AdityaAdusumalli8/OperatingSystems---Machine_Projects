@@ -81,28 +81,60 @@ extern void plic_close_irq(int irqno) {
 
 void plic_set_source_priority(uint32_t srcno, uint32_t level) {
     // FIXME your code goes here
+    volatile uint32_t *priority_addr = (volatile uint32_t *)(PLIC_IOBASE + (srcno * 4));
+    *priority_addr = level;
 }
 
 int plic_source_pending(uint32_t srcno) {
     // FIXME your code goes here
+    uint32_t word_index = srcno / 32;
+    uint32_t bit_index = srcno % 32;
+
+    volatile uint32_t *pending_base = (volatile uint32_t *)(PLIC_IOBASE + 0x1000);
+    volatile uint32_t *pending_addr = pending_base + word_index;
+
+    if (*pending_addr & (1 << bit_index))
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 void plic_enable_source_for_context(uint32_t ctxno, uint32_t srcno) {
     // FIXME your code goes here
+    uint32_t word_index = srcno / 32;
+    uint32_t bit_index = srcno % 32;
+    volatile uint32_t *enable_base = (volatile uint32_t *)(PLIC_IOBASE + 0x2000 + (ctxno * 0x80));
+    volatile uint32_t *enable_addr = enable_base + word_index;
+    *enable_addr |= 1 << bit_index;
 }
 
 void plic_disable_source_for_context(uint32_t ctxno, uint32_t srcid) {
     // FIXME your code goes here
+    uint32_t word_index = srcid / 32;
+    uint32_t bit_index = srcid % 32;
+    volatile uint32_t *enable_base = (volatile uint32_t *)(PLIC_IOBASE + 0x2000 + (ctxno * 0x80));
+    volatile uint32_t *enable_addr = enable_base + word_index;
+    *enable_addr &= ~(1 << bit_index);
 }
 
 void plic_set_context_threshold(uint32_t ctxno, uint32_t level) {
     // FIXME your code goes here
+    volatile uint32_t *threshold_addr = (volatile uint32_t *)(PLIC_IOBASE + 0x200000 + (ctxno * 0x1000 ));
+    *threshold_addr = level;
 }
 
 uint32_t plic_claim_context_interrupt(uint32_t ctxno) {
     // FIXME your code goes here
+    volatile uint32_t *claim_addr = (volatile uint32_t *)(PLIC_IOBASE + 0x200004 + (ctxno * 0x1000));
+    return *claim_addr;
 }
 
 void plic_complete_context_interrupt(uint32_t ctxno, uint32_t srcno) {
     // FIXME your code goes here
+    volatile uint32_t *claim_addr = (volatile uint32_t *)(PLIC_IOBASE + 0x200004 + (ctxno * 0x1000));
+    return *claim_addr = srcno;
 }
