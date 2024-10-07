@@ -170,6 +170,9 @@ char com1_getc(void) {
 }
 
 static void uart1_isr (int irqno, void * aux) {
+    if(irqno >= SERIAL_RBUFSZ){
+        return;
+    }
     const uint_fast8_t line_status = UART1.lsr;
 
     if (line_status & LSR_OE)
@@ -178,23 +181,22 @@ static void uart1_isr (int irqno, void * aux) {
     }
 
     if (line_status & LSR_DR){
-        char recieved_char = UART1.rbr;
+        char buffer_char = UART1.rbr;
         if (!rbuf_full(&uart1_rxbuf)){
-            rbuf_put(&uart1_rxbuf, recieved_char);
+            rbuf_put(&uart1_rxbuf, buffer_char);
         }
         else{
             UART1.ier &= ~IER_DRIE;
-            //panic("Receive buffer overrun");
         }
     }
-    if (line_status & LSR_THRE){
-        if (!rbuf_empty(&uart1_txbuf)){
-            UART1.thr = rbuf_get(&uart1_txbuf);
-        }
-        else{
-            UART1.ier &= ~IER_THREIE;
-        }
+    if ((line_status & LSR_THRE) && (!rbuf_empty(&uart1_txbuf)) ){
+       UART1.thr = rbuf_get(&uart1_txbuf);
     }
+        
+    else if ((line_status & LSR_THRE)){
+        UART1.ier &= ~IER_THREIE;
+    }
+    
 
     // FIXME your code goes here
 }

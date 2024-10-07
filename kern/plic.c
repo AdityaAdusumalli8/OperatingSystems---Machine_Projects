@@ -19,6 +19,12 @@
 #define PLIC_SRCCNT 0x400
 #define PLIC_CTXCNT 1
 
+#define Enable_Array_Size 0x80
+#define Pending_Bits_BASE 0x1000
+#define Enable_Bits_BASE 0x2000
+#define MIN_Inter_Priority 0x200000
+#define CLAIM_COMPLETE_REG 0x200004
+
 // INTERNAL FUNCTION DECLARATIONS
 //
 
@@ -81,22 +87,22 @@ extern void plic_close_irq(int irqno) {
 
 void plic_set_source_priority(uint32_t srcno, uint32_t level) {
     // FIXME your code goes here
+    if ((level> PLIC_PRIO_MAX) || (srcno >= PLIC_SRCCNT)){
+        return;
+    }
     volatile uint32_t *priority_addr = (volatile uint32_t *)(PLIC_IOBASE + (srcno * 4));
-    //console_printf("Priority Set for source %u at address: %p with level: %u,\n", srcno, priority_addr,level);
     *priority_addr = level;
 }
 
 int plic_source_pending(uint32_t srcno) {
     // FIXME your code goes here
-    uint32_t word_index = srcno / 32;
-    uint32_t bit_index = srcno % 32;
+    if ((srcno>= PLIC_SRCCNT)){
+        return;
+    }
+    uint32_t word_index = (srcno / 32)*4;
+    volatile uint32_t *pending_addr = (volatile uint32_t *)(PLIC_IOBASE + Pending_Bits_BASE + word_index);
 
-    volatile uint32_t *pending_base = (volatile uint32_t *)(PLIC_IOBASE + 0x1000);
-    volatile uint32_t *pending_addr = pending_base + word_index;
-
-    //console_printf("Pending Status for source %u at address: %p with bit pos: %u,\n", srcno, pending_base,bit_index);
-
-    if (*pending_addr & (1 << bit_index))
+    if (*pending_addr & (1 << (srcno % 32)))
     {
         return 1;
     }
@@ -108,43 +114,49 @@ int plic_source_pending(uint32_t srcno) {
 
 void plic_enable_source_for_context(uint32_t ctxno, uint32_t srcno) {
     // FIXME your code goes here
-    uint32_t word_index = srcno / 32;
-    uint32_t bit_index = srcno % 32;
-    volatile uint32_t *enable_base = (volatile uint32_t *)(PLIC_IOBASE + 0x2000 + (ctxno * 0x80));
-    volatile uint32_t *enable_addr = enable_base + word_index;
+    if ((ctxno >= PLIC_CTXCNT) || (srcno>= PLIC_SRCCNT)){
+        return;
+    }
+    uint32_t word_index = (srcno / 32)*4;
+    volatile uint32_t *enable_addr = (volatile uint32_t *)(PLIC_IOBASE + Enable_Bits_BASE + (ctxno * Enable_Array_Size) + word_index);
 
-    //console_printf("Disable Source for source %u for context %u at address:%p\n", srcno, ctxno,enable_base);
-    *enable_addr |= 1 << bit_index;
+    *enable_addr |= 1 << (srcno % 32);
 }
 
 void plic_disable_source_for_context(uint32_t ctxno, uint32_t srcid) {
     // FIXME your code goes here
-    uint32_t word_index = srcid / 32;
-    uint32_t bit_index = srcid % 32;
-    volatile uint32_t *enable_base = (volatile uint32_t *)(PLIC_IOBASE + 0x2000 + (ctxno * 0x80));
-    volatile uint32_t *enable_addr = enable_base + word_index;
-    //console_printf("Enable Source for source %u for context %u at address:%p\n", srcid, ctxno,enable_base);
-    *enable_addr &= ~(1 << bit_index);
+    if ((ctxno >= PLIC_CTXCNT) || (srcid>= PLIC_SRCCNT)){
+        return;
+    }
+    uint32_t word_index = (srcid / 32)*4;
+    volatile uint32_t *enable_addr = (volatile uint32_t *)(PLIC_IOBASE + Enable_Bits_BASE + (ctxno * Enable_Array_Size) + word_index);
+    *enable_addr &= ~(1 << (srcid % 32));
 }
 
 void plic_set_context_threshold(uint32_t ctxno, uint32_t level) {
     // FIXME your code goes here
-    volatile uint32_t *threshold_addr = (volatile uint32_t *)(PLIC_IOBASE + 0x200000 + (ctxno * 0x1000 ));
-    //console_printf("Set threshold for context %u at address:%p\n",ctxno,threshold_addr);
-    *threshold_addr = level;
+    if ((level> PLIC_PRIO_MAX )||(ctxno >= PLIC_CTXCNT)){
+        return;
+    }
+    volatile uint32_t *thresh = (volatile uint32_t *)(PLIC_IOBASE + MIN_Inter_Priority + (ctxno * Pending_Bits_BASE ));
+    *thresh = level;
 }
 
 uint32_t plic_claim_context_interrupt(uint32_t ctxno) {
     // FIXME your code goes here
-    volatile uint32_t *claim_addr = (volatile uint32_t *)(PLIC_IOBASE + 0x200004 + (ctxno * 0x1000));
-    //console_printf("Claim interrupt for context %u at address:%p\n",ctxno,claim_addr);
+    if ((ctxno >= PLIC_CTXCNT)){
+        return;
+    }
+    volatile uint32_t *claim = (volatile uint32_t *)(PLIC_IOBASE + CLAIM_COMPLETE_REG + (ctxno * Pending_Bits_BASE));
 
-    return *claim_addr;
+    return *claim;
 }
 
 void plic_complete_context_interrupt(uint32_t ctxno, uint32_t srcno) {
     // FIXME your code goes here
-    volatile uint32_t *complete_addr = (volatile uint32_t *)(PLIC_IOBASE + 0x200004 + (ctxno * 0x1000));
-    //console_printf("Complete interrupt source %u for context %u at address:%p\n", srcno, ctxno,complete_addr);
+    if ((ctxno >= PLIC_CTXCNT) || (srcno>= PLIC_SRCCNT)){
+        return;
+    }
+    volatile uint32_t *complete_addr = (volatile uint32_t *)(PLIC_IOBASE + CLAIM_COMPLETE_REG + (ctxno * Pending_Bits_BASE));
     return *complete_addr = srcno;
 }
