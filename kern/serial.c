@@ -210,6 +210,17 @@ char com1_getc(void) {
 
 }
 
+/*
+Inputs -  int irqno: Interrupt request number
+void * aux: Auxiliary data
+Outputs - None
+
+Purpose - This function is the ISR routine for the UART1 device.
+
+Effect - Recieves characters and store them recieve buffer. Sends characters when
+transmit buffer holding register is empty. Disables interrupts if buffers are full/empty.
+
+*/
 static void uart1_isr (int irqno, void * aux) {
     // FIXME your code goes here
     // Check if interrupt request number in bounds. 
