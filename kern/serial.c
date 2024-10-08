@@ -135,41 +135,84 @@ char com0_getc(void) {
     return UART0.rbr;
 }
 
+/*
+Inputs -  None
+Outputs - None
+
+Purpose - Initialize the UART1 device, enable interrupts, and register the ISR 
+
+Effect - Initialize ring buffers for UART1. Set baud rate and control registers. Enables
+UART1 data recieve interrupt. Registers ISR for UART1 and indicate UART1 has been intitalized.
+*/
 void com1_init(void) {
     // FIXME your code goes here
+    // Initialize the UART transmit and recieve ring buffers.
     rbuf_init(&uart1_rxbuf);
     rbuf_init(&uart1_txbuf);
+
+    //Enable access to Divisor Latch 
     UART1.lcr = LCR_DLAB;
+    // Set high and low byte for the baud rate divisor
     UART1.dll = 0x01;
     UART1.dlm = 0x00;
+    // Set line control register
     UART1.lcr = 0x03;
 
+    // Read the recieve buffer reg
     UART1.rbr;
+    // Enable Data Recieve Interrupt
     UART1.ier = IER_DRIE;
+    // Set priority of UART1 interrupt to 1. Enable interrupt source for context 0.
+    // Register the UART1 ISR with priority 1 and associate with interrupt number. 
     plic_set_source_priority(UART1_IRQNO,1);
     plic_enable_source_for_context(0, UART1_IRQNO);
     intr_register_isr(UART1_IRQNO,1,uart1_isr,NULL );
 
+    // Mark UART1 as initialized
     com1_initialized =1;
 }
 
+/*
+Inputs -  char c: Character to be written to UART transmit buffer
+Outputs - None
+
+Purpose - Writes character c to UART1 transmit buffer. 
+
+Effect - Character c is placed into the transmit buffer and the interrupt for transmit is enabled to send character. 
+*/
 void com1_putc(char c) {
     // FIXME your code goes here
+    // Wait until space in transmit buffer 
     rbuf_wait_not_full(&uart1_txbuf);
+    // PLace the character in the buffer.
     rbuf_put(&uart1_txbuf,c);
+    // Enable Transmitter Holding Register Empty interrupt and inform UART to send data.
     UART1.ier |= IER_THREIE;
 }
 
+/*
+Inputs -  None
+Outputs - char: Character read from the UART buffer
+
+Purpose - Read and recieve the character from the UART recieve buffer. 
+
+Effect - Function waits for data to enter recieve buffer, recieves the character, and enables interrupt for further data reception. 
+*/
 char com1_getc(void) {
     // FIXME your code goes here
+    // Wait for characters are present in recieve buffer.
     rbuf_wait_not_empty(&uart1_rxbuf);
+    // Retrieve the character c from thje recieve buffer.
     char c = rbuf_get(&uart1_rxbuf);
+    // Enable the Data Ready Interrupt to continue recieving data. 
     UART1.ier |= IER_DRIE;
     return c;
 
 }
 
 static void uart1_isr (int irqno, void * aux) {
+    // FIXME your code goes here
+    // Check if interrupt request number in bounds. 
     if(irqno >= SERIAL_RBUFSZ){
         return;
     }
@@ -180,25 +223,29 @@ static void uart1_isr (int irqno, void * aux) {
         panic("Receive buffer overrun");
     }
 
+    // Check if data is available to be read from recieve buffer
     if (line_status & LSR_DR){
+        // Read character from the recieve buffer register
         char buffer_char = UART1.rbr;
+        // If the recieve buffer has space, place the character in buffer
         if (!rbuf_full(&uart1_rxbuf)){
             rbuf_put(&uart1_rxbuf, buffer_char);
         }
         else{
+            // If buffer is full , disable the Data Ready Interrupt
             UART1.ier &= ~IER_DRIE;
         }
     }
+    // Ensure THR is empty and there is data to send
     if ((line_status & LSR_THRE) && (!rbuf_empty(&uart1_txbuf)) ){
-       UART1.thr = rbuf_get(&uart1_txbuf);
+        // Send the next character from transmit buffer
+        UART1.thr = rbuf_get(&uart1_txbuf);
     }
-        
+    // Disable Interrupt if THR is empty and no data to send.
     else if ((line_status & LSR_THRE)){
         UART1.ier &= ~IER_THREIE;
     }
     
-
-    // FIXME your code goes here
 }
 
 void rbuf_init(struct ringbuf * rbuf) {

@@ -94,6 +94,15 @@ void intr_handler(int code) {
     }
 }
 
+/*
+Inputs -  None
+
+Outputs - None
+
+Purpose - Handles external interrupts from PLIC by identifying interrupt source and calling appropriate ISR. 
+
+Effect - Helps claim interrupt in PLIC, calls specific ISR, and copmletes interrupt handling in PLIC. 
+*/
 void extern_intr_handler(void) {
     int irqno;
 
@@ -109,6 +118,7 @@ void extern_intr_handler(void) {
         panic("unhandled irq");
     
     // FIXME your code goes here
+    // EXecute the respective ISR for the source number and pass the auxiliary data. 
     isrtab[irqno].isr(irqno, isrtab[irqno].isr_aux );
 
     plic_close_irq(irqno);
