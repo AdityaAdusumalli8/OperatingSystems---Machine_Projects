@@ -46,7 +46,9 @@ static inline int intr_enable(void) {
 
     asm volatile (
     "csrrsi  %0, mstatus, %1"
-    : "=r" (mstatus) : "I" (RISCV_MSTATUS_MIE));
+    :   "=r" (mstatus)
+    :   "I" (RISCV_MSTATUS_MIE)
+    :   "memory");
 
     return (int)mstatus;
 }
@@ -56,7 +58,9 @@ static inline int intr_disable(void) {
 
     asm volatile (
     "csrrci %0, mstatus, %1"
-    : "=r" (mstatus) : "I" (RISCV_MSTATUS_MIE));
+    :   "=r" (mstatus)
+    :   "I" (RISCV_MSTATUS_MIE)
+    :   "memory");
 
     return (int)mstatus;
 }
@@ -65,8 +69,11 @@ static inline int intr_disable(void) {
 
 static inline void intr_restore(int saved_intr_state) {
     asm volatile (
-    "csrs  mstatus, %0"
-    :: "r" (saved_intr_state & RISCV_MSTATUS_MIE));
+    "csrci mstatus, %0" "\n\t"
+    "csrs  mstatus, %1"
+    ::  "I" (RISCV_MSTATUS_MIE),
+        "r" (saved_intr_state & RISCV_MSTATUS_MIE)
+    :   "memory");
 }
 
 static int intr_enabled(void) {
