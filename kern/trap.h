@@ -13,8 +13,8 @@
 
 struct trap_frame {
     uint64_t x[32]; // x[0] unused
-    uint64_t mepc;
     uint64_t mstatus;
+    uint64_t mepc;
 };
 
 // _trap_entry dispatches to except_handler in halt.c (for now) or intr_handler
