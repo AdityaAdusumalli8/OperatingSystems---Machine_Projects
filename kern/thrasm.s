@@ -75,9 +75,36 @@ _thread_swtch:
 # Sets up the initial context for a new thread. The thread will begin execution
 # in /start/, receiving /arg/ as the first argument. 
 
+        .global _thread_setup
+        .type   _thread_setup, @function
 _thread_setup:
         # FIXME your code goes here
+        # Store stack pointer in thred context
+        sd a1, 104(a0)
+        # Store argument 
+        sd a2, 0(a0)
+        # Store start function pointer in thread context
+        sd a3, 88(a0)
+        # Set the return address to start_init function. This will call the start
+        # function and call the exit function after its done
+        la t0, _start_init
+        sd t0, 96(a0)
         ret
+
+        .global _start_init
+        .type   _start_init, @function
+_start_init:
+        # Load argument from thread context
+        ld a1, 0(tp)
+        # Load start function pointer
+        ld t0, 88(tp)
+        # Call start function
+        jalr t0
+        # Load address of thread_exit
+        la t0, thread_exit
+        # Call exit function
+        jalr t0
+
 
 # Statically allocated stack for the idle thread.
 

@@ -303,6 +303,21 @@ int thread_join_any(void) {
 
 int thread_join(int tid) {
     // FIXME your goes code here
+    // Return -1 if there is no thread with specified TID or if calling thread is not parent of specified thread.
+    if ((thrtab[tid] == NULL) || (thrtab[tid]->parent != CURTHR))
+    {
+        return -1;
+    }
+
+    // Case 1 - Child already exited and thread_join doesn't need to wait. Return child thread id immediately and release resources.
+    if (thrtab[tid]->state == THREAD_EXITED){
+        recycle_thread(tid);
+        return tid;
+    }
+    // Case 2 - Child still running. Wait on condition variable and then release resources and return child thread.
+    condition_wait(&CURTHR->child_exit);
+    recycle_thread(tid);
+    return tid;
 }
 
 void condition_init(struct condition * cond, const char * name) {
@@ -334,6 +349,20 @@ void condition_wait(struct condition * cond) {
 
 void condition_broadcast(struct condition * cond) {
     // FIXME your code goes here
+    // Save, disable, and restore interrupt states
+    int savedIntrState = intr_disable();
+    // Loop through all threads in codition's wait list
+    while(!tlempty(&cond->wait_list)){
+        // Remove thread from wait list
+        struct thread * waitingThread = tlremove(&cond->wait_list);
+        // Change state of thread from Waiting to Ready
+        set_thread_state(waitingThread, THREAD_READY);
+        // Set the wait_cond of the thread to null
+        waitingThread->wait_cond = NULL;
+        // Place the thread on the ready to run list 
+        tlinsert(&ready_list, waitingThread);
+    }
+    intr_restore(savedIntrState);
 }
 
 // INTERNAL FUNCTION DEFINITIONS
@@ -396,6 +425,26 @@ void recycle_thread(int tid) {
 
 void suspend_self(void) {
     // FIXME your code here
+    // Save, disable, and restore interrupts
+    int savedIntrState = intr_disable();
+    // First ensure there is no empty ready list by inserting the idle thread
+    if (CURTHR != thrtab[IDLE_TID] && tlempty(&ready_list)){
+        tlinsert(&ready_list, thrtab[IDLE_TID]);
+    }
+    // If the calling thread is in running state, then insert at tail of ready_list
+    if (CURTHR->state == THREAD_RUNNING){
+        set_thread_state(CURTHR, THREAD_READY);
+        tlinsert(&ready_list, CURTHR);
+    }
+    // Remove calling thread from execution and switch to the next thread in the ready_list
+   struct thread * nextThread = tlremove(&ready_list);
+   // Set the state for the next thread to running
+   set_thread_state(nextThread, THREAD_RUNNING);
+   // Perform the context switch for threads here.
+   set_running_thread(_thread_swtch(nextThread));
+
+
+    intr_restore(savedIntrState);
 }
 
 void tlclear(struct thread_list * list) {

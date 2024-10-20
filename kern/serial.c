@@ -272,11 +272,39 @@ char com_getc_sync(struct uart *uart)
 void com_putc_async(struct uart *uart, char c)
 {
     // FIXME your code goes here
+    // Disable interrupts to protect data and restore at end of function.
+    int savedIntrState = intr_disable();
+    // WHile the transmit buffer is full, wait for the condition txbuf_not_fll to be signaled before writing.
+    while(rbuf_full(&uart->txbuf)){
+        condition_wait(&uart->txbuf_not_full);
+    }
+    // If the buffer isn't full, then write character to buffer
+    rbuf_put(&uart->txbuf,c);
+    // Enable the Transmit Interrupt to allow for more characters to move to buffer
+    uart->regs->ier |= IER_THREIE;
+
+    intr_restore(savedIntrState);
 }
 
 char com_getc_async(struct uart *uart)
 {
     // FIXME your code goes here
+    // Disable interrupts to protect data and restore at end of function.
+    int savedIntrState = intr_disable();
+
+    // WHile the recieve buffer is empty, wait for the condition rxbuf_not_empty to be signaled before reading.
+    while (rbuf_empty(&uart->rxbuf))
+    {
+        condition_wait(&uart->rxbuf_not_empty);
+    }
+    // Read character from recieve buffer if the recive buffer is not empty
+    char c = rbuf_get(&uart->rxbuf);
+
+    // Enable the Recieve Interrupt to notify when data is available
+    uart->regs->ier |= IER_DRIE;
+
+    intr_restore(savedIntrState);
+    return c;
 }
 
 static void uart_isr(int irqno, void *aux)
@@ -290,6 +318,35 @@ static void uart_isr(int irqno, void *aux)
         panic("Receive buffer overrun");
 
     // FIXME your code goes here
+    // Check if data is available to be read from recieve buffer
+    if (line_status & LSR_DR)
+    {
+        // Read character from the recieve buffer register
+        char buffer_char = uart->regs->rbr;
+        // If the recieve buffer has space, place the character in buffer
+        if (!rbuf_full(&uart->rxbuf))
+        {
+            rbuf_put(&uart->rxbuf, buffer_char);
+            condition_broadcast(&uart->rxbuf_not_empty);
+        }
+        else
+        {
+            // If buffer is full , disable the Data Ready Interrupt
+            uart->regs->ier &= ~IER_DRIE;
+        }
+    }
+    // Ensure THR is empty and there is data to send
+    if ((line_status & LSR_THRE) && (!rbuf_empty(&uart->txbuf)))
+    {
+        // Send the next character from transmit buffer
+        uart->regs->thr = rbuf_get(&uart->txbuf);
+        condition_broadcast(&uart->txbuf_not_full);
+    }
+    // Disable Interrupt if THR is empty and no data to send.
+    else if ((line_status & LSR_THRE))
+    {
+        uart->regs->ier &= ~IER_THREIE;
+    }
 }
 
 void rbuf_init(struct ringbuf *rbuf)

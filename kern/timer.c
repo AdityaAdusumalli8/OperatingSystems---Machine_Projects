@@ -58,6 +58,18 @@ void timer_start(void) {
 
 void timer_intr_handler(void) {
     // FIXME your code goes here
+    // Signal the tick_10Hz condiition and increment the global count variable when a timer interrupt occurs
+    tick_10Hz_count++;
+    condition_broadcast(&tick_10Hz);
+
+    // Signal the tick_1Hz condition and increment the globabl variable. Broadcast this condition once every
+    // 10 times the 10 Hz condition is signalled
+    if(tick_10Hz_count %10 ==0){
+        tick_1Hz_count++;
+        condition_broadcast(&tick_1Hz);
+    }
+    // Schedule the next interrupt to occur 1/10 second or 100ms after the current time.
+    set_mtimecmp(get_mtime() + (MTIME_FREQ/10));
 }
 
 // Hard-coded MTIMER device addresses for QEMU virt device

@@ -6,6 +6,7 @@
 #include "halt.h"
 #include "csr.h"
 #include "plic.h"
+#include "timer.h"
 
 #include <stddef.h>
 
@@ -84,9 +85,13 @@ void intr_disable_irq(int irqno) {
 //
 
 void intr_handler(int code) {
+    // Include a case for machine timer interrupt to call our timer handler function.
     switch (code) {
     case RISCV_MCAUSE_EXCODE_MEI:
         extern_intr_handler();
+        break;
+    case RISCV_MCAUSE_EXCODE_MTI:
+        timer_intr_handler();
         break;
     default:
         panic("unhandled interrupt");
