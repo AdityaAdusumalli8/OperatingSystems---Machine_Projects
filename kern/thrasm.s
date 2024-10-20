@@ -82,9 +82,9 @@ _thread_setup:
         # Store stack pointer in thred context
         sd a1, 104(a0)
         # Store argument 
-        sd a2, 0(a0)
+        sd a2, 88(a0)
         # Store start function pointer in thread context
-        sd a3, 88(a0)
+        sd a3, 0(a0)
         # Set the return address to start_init function. This will call the start
         # function and call the exit function after its done
         la t0, _start_init
@@ -95,7 +95,7 @@ _thread_setup:
         .type   _start_init, @function
 _start_init:
         # Load argument from thread context
-        ld a1, 0(tp)
+        ld a0, 0(tp)
         # Load start function pointer
         ld t0, 88(tp)
         # Call start function

@@ -438,13 +438,13 @@ void suspend_self(void) {
     }
     // Remove calling thread from execution and switch to the next thread in the ready_list
    struct thread * nextThread = tlremove(&ready_list);
+   intr_restore(savedIntrState);
    // Set the state for the next thread to running
    set_thread_state(nextThread, THREAD_RUNNING);
    // Perform the context switch for threads here.
-   set_running_thread(_thread_swtch(nextThread));
+   _thread_swtch(nextThread);
 
 
-    intr_restore(savedIntrState);
 }
 
 void tlclear(struct thread_list * list) {
