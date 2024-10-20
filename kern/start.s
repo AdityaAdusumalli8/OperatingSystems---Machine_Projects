@@ -4,6 +4,7 @@
         # in the .data section.
 
         la	sp, _main_guard
+        mv      fp, sp
 
         # Initalize the trap vector (mtvec CSR). The trap handler is defined
         # in trap.s.
@@ -32,7 +33,7 @@
         .size		_main_guard, MAIN_GUARD_SIZE
 
 _main_stack:
-        .fill	MAIN_STACK_SIZE, 1, 0xA5
+        .fill   MAIN_STACK_SIZE, 1, 0xA5
 
 _main_guard:
         .fill	MAIN_GUARD_SIZE, 1, 0x5A

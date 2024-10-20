@@ -6,6 +6,7 @@
 #include "halt.h"
 #include "csr.h"
 #include "plic.h"
+#include "timer.h"
 
 #include <stddef.h>
 
@@ -84,9 +85,13 @@ void intr_disable_irq(int irqno) {
 //
 
 void intr_handler(int code) {
+    // Include a case for machine timer interrupt to call our timer handler function.
     switch (code) {
     case RISCV_MCAUSE_EXCODE_MEI:
         extern_intr_handler();
+        break;
+    case RISCV_MCAUSE_EXCODE_MTI:
+        timer_intr_handler();
         break;
     default:
         panic("unhandled interrupt");
@@ -94,6 +99,15 @@ void intr_handler(int code) {
     }
 }
 
+/*
+Inputs -  None
+
+Outputs - None
+
+Purpose - Handles external interrupts from PLIC by identifying interrupt source and calling appropriate ISR. 
+
+Effect - Helps claim interrupt in PLIC, calls specific ISR, and copmletes interrupt handling in PLIC. 
+*/
 void extern_intr_handler(void) {
     int irqno;
 
@@ -109,6 +123,7 @@ void extern_intr_handler(void) {
         panic("unhandled irq");
     
     // FIXME your code goes here
+    // EXecute the respective ISR for the source number and pass the auxiliary data. 
     isrtab[irqno].isr(irqno, isrtab[irqno].isr_aux );
 
     plic_close_irq(irqno);
