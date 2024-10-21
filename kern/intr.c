@@ -84,6 +84,16 @@ void intr_disable_irq(int irqno) {
 // INTERNAL FUNCTION DEFINITIONS
 //
 
+/*
+Inputs -  int code : Value that represents the type of interrupt occured
+
+Outputs - None
+
+Purpose -  The purpose of this function is to call a specific function and handle the interrupt based on input. 
+
+Effect - The effect of this function is that a specific handler function is triggered when an interrupt occurs.
+If the interrupt isn't recognized and assigned to a handler function, there is a panic.
+*/
 void intr_handler(int code) {
     // Include a case for machine timer interrupt to call our timer handler function.
     switch (code) {

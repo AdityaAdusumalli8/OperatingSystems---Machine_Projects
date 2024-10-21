@@ -269,6 +269,19 @@ char com_getc_sync(struct uart *uart)
     return uart->regs->rbr;
 }
 
+/*
+Inputs -  struct uart *uart : Pointer to uart structure containing specific information about the specific UART device.
+char c : The character to be placed into the transmit buffer
+
+Outputs - None
+
+Purpose -  The purpose of this function is to place a character into the uart transmit buffer. The function makes sure
+the character is only placed when space is in transmit buffer.
+
+Effect - The effect of this function is that it waits until the buffer has space and then places the character in
+the buffer. Then the Transmit Interrupt signal is enabled to allow for more characters to be written. Disable interrupts
+and restores the state at the end to avoid simultaneous access to critical data.
+*/
 void com_putc_async(struct uart *uart, char c)
 {
     // FIXME your code goes here
@@ -286,6 +299,18 @@ void com_putc_async(struct uart *uart, char c)
     intr_restore(savedIntrState);
 }
 
+/*
+Inputs -  struct uart *uart : Pointer to uart structure containing specific information about the specific UART device.
+
+Outputs - char : The character read from the recieve buffer
+
+Purpose -  The purpose of this function is to read a character from the uart recieve buffer. The function makes sure
+the character is only read when the reiceve buffer is not empty.
+
+Effect - The effect of this function is that it waits until the recieve buffer isn't empty and then reads the character in
+the buffer. Then the Recieve Interrupt signal is enabled to allow for more characters to be read. Disable interrupts
+and restores the state at the end to avoid simultaneous access to critical data.
+*/
 char com_getc_async(struct uart *uart)
 {
     // FIXME your code goes here
@@ -298,15 +323,25 @@ char com_getc_async(struct uart *uart)
         condition_wait(&uart->rxbuf_not_empty);
     }
     // Read character from recieve buffer if the recive buffer is not empty
-    char c = rbuf_get(&uart->rxbuf);
+    char character = rbuf_get(&uart->rxbuf);
 
     // Enable the Recieve Interrupt to notify when data is available
     uart->regs->ier |= IER_DRIE;
 
     intr_restore(savedIntrState);
-    return c;
+    return character;
 }
 
+/*
+Inputs -  int irqno : This is the interrupt request number.
+void *aux: Auxiliary data passed to the ISR.
+Outputs - char : None
+
+Purpose -  The purpose of this function is to handle the UART ISR. 
+
+Effect - The effect of this function is that it reads data from recieve buffer if available and 
+writes data to transmit buffer if buffer isn't full. Handles by checking and setting the buffer status
+*/
 static void uart_isr(int irqno, void *aux)
 {
     struct uart *const uart = aux;
