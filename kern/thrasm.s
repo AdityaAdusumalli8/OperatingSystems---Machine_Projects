@@ -90,20 +90,19 @@ _thread_setup:
         la t0, _start_init
         sd t0, 96(a0)
         ret
-
-        .global _start_init
-        .type   _start_init, @function
 _start_init:
         # Load argument from thread context
         ld a0, 0(tp)
         # Load start function pointer
         ld t0, 88(tp)
         # Call start function
-        jalr t0
+        la ra, start_func_next
+        jr t0
+start_func_next:
         # Load address of thread_exit
         la t0, thread_exit
         # Call exit function
-        jalr t0
+        jr t0
 
 
 # Statically allocated stack for the idle thread.

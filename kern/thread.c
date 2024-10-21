@@ -301,6 +301,19 @@ int thread_join_any(void) {
 
 // Wait for specific child thread to exit. Returns the thread id of the child.
 
+/*
+Inputs -  int tid: The thread id of child thread that current thread is waiting for. 
+Outputs - int : Return -1 if the thread with input tid isn't a child of current thread. Return
+-1 if there is no thread with inputted tid.
+
+Purpose -  The purpose of this function is to enable the current calling thread to wait for the child
+thread to exit. It handles and manages this according to the child's current state.
+
+Effect - The effect of this function is to make sure the calling thread waits for the child thread correctly. It handles 
+2 cases : if the child already exited or is still currently running. If child already exited, then release its resources 
+and return the child thread id. If child is still running, then wait for the child_exit condition variable and then release
+resources.
+*/
 int thread_join(int tid) {
     // FIXME your goes code here
     // Return -1 if there is no thread with specified TID or if calling thread is not parent of specified thread.
@@ -347,6 +360,17 @@ void condition_wait(struct condition * cond) {
     intr_restore(saved_intr_state);
 }
 
+/*
+Inputs -  struct condition *cond : Pointer to condition structure containing wait list of threads.
+
+Outputs - None
+
+Purpose -  The purpose of this function is to make each thread waiting on a specific condititon ready to run. 
+
+Effect - The effect of this function is that it all threads in the condition's wait list are removed and their state made to Ready.
+The wait_cond of these threads are cleared and they are placed to the redy to run list. 
+Disable interrupts and restores the state at the end to avoid simultaneous access to critical data.
+*/
 void condition_broadcast(struct condition * cond) {
     // FIXME your code goes here
     // Save, disable, and restore interrupt states
@@ -423,6 +447,18 @@ void recycle_thread(int tid) {
     kfree(thr);
 }
 
+/*
+Inputs -  None
+
+Outputs - None
+
+Purpose -  The purpose of this function is to suspend execution of current thread and switch to next thread in ready list.
+
+Effect - The effect of this function is that the current thread is removed from execution and switches to the next thread in
+ready list. If the current thread is currently running, then suspend execution and place at the end of the readylist.
+If the current thread is suspended and the ready list is empty, then switch to the idle thread.
+Disable interrupts and restores the state at the end to avoid simultaneous access to critical data.
+*/
 void suspend_self(void) {
     // FIXME your code here
     // Save, disable, and restore interrupts
@@ -431,11 +467,13 @@ void suspend_self(void) {
     if (CURTHR != thrtab[IDLE_TID] && tlempty(&ready_list)){
         tlinsert(&ready_list, thrtab[IDLE_TID]);
     }
+
     // If the calling thread is in running state, then insert at tail of ready_list
     if (CURTHR->state == THREAD_RUNNING){
         set_thread_state(CURTHR, THREAD_READY);
         tlinsert(&ready_list, CURTHR);
     }
+    
     // Remove calling thread from execution and switch to the next thread in the ready_list
    struct thread * nextThread = tlremove(&ready_list);
    intr_restore(savedIntrState);

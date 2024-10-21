@@ -56,6 +56,15 @@ void timer_start(void) {
 
 // timer_handle_interrupt() is dispatched from intr_handler in intr.c
 
+/*
+Inputs -  None
+Outputs - None
+
+Purpose -  The purpose of this function is to handle the timer interrupt and schedule the next timer interrupt. 
+
+Effect - The effect of this function is to handle the timer interrupt by signaling the tick_10Hz and tick_1Hz condition
+and incrementing the respective count variables. The next timer interrupt is scheduled 100ms after the current time.
+*/
 void timer_intr_handler(void) {
     // FIXME your code goes here
     // Signal the tick_10Hz condiition and increment the global count variable when a timer interrupt occurs
@@ -69,7 +78,9 @@ void timer_intr_handler(void) {
         condition_broadcast(&tick_1Hz);
     }
     // Schedule the next interrupt to occur 1/10 second or 100ms after the current time.
-    set_mtimecmp(get_mtime() + (MTIME_FREQ/10));
+    uint64_t currentTime = get_mtime();
+    uint64_t offsetTime = MTIME_FREQ/10;
+    set_mtimecmp(currentTime + offsetTime);
 }
 
 // Hard-coded MTIMER device addresses for QEMU virt device

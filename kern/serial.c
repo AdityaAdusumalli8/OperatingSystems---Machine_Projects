@@ -287,12 +287,13 @@ void com_putc_async(struct uart *uart, char c)
     // FIXME your code goes here
     // Disable interrupts to protect data and restore at end of function.
     int savedIntrState = intr_disable();
+    struct ringbuf *transmitBuffer = &uart->txbuf;
     // WHile the transmit buffer is full, wait for the condition txbuf_not_fll to be signaled before writing.
-    while(rbuf_full(&uart->txbuf)){
+    while(rbuf_full(transmitBuffer)){
         condition_wait(&uart->txbuf_not_full);
     }
     // If the buffer isn't full, then write character to buffer
-    rbuf_put(&uart->txbuf,c);
+    rbuf_put(transmitBuffer,c);
     // Enable the Transmit Interrupt to allow for more characters to move to buffer
     uart->regs->ier |= IER_THREIE;
 
@@ -316,14 +317,14 @@ char com_getc_async(struct uart *uart)
     // FIXME your code goes here
     // Disable interrupts to protect data and restore at end of function.
     int savedIntrState = intr_disable();
-
+    struct ringbuf *recieveBuffer = &uart->rxbuf;
     // WHile the recieve buffer is empty, wait for the condition rxbuf_not_empty to be signaled before reading.
-    while (rbuf_empty(&uart->rxbuf))
+    while (rbuf_empty(recieveBuffer))
     {
         condition_wait(&uart->rxbuf_not_empty);
     }
     // Read character from recieve buffer if the recive buffer is not empty
-    char character = rbuf_get(&uart->rxbuf);
+    char character = rbuf_get(recieveBuffer);
 
     // Enable the Recieve Interrupt to notify when data is available
     uart->regs->ier |= IER_DRIE;
@@ -335,7 +336,7 @@ char com_getc_async(struct uart *uart)
 /*
 Inputs -  int irqno : This is the interrupt request number.
 void *aux: Auxiliary data passed to the ISR.
-Outputs - char : None
+Outputs -  None
 
 Purpose -  The purpose of this function is to handle the UART ISR. 
 
@@ -354,14 +355,15 @@ static void uart_isr(int irqno, void *aux)
 
     // FIXME your code goes here
     // Check if data is available to be read from recieve buffer
+    struct ringbuf *recieveBuffer = &uart->rxbuf;
     if (line_status & LSR_DR)
     {
         // Read character from the recieve buffer register
         char buffer_char = uart->regs->rbr;
         // If the recieve buffer has space, place the character in buffer
-        if (!rbuf_full(&uart->rxbuf))
+        if (!rbuf_full(recieveBuffer))
         {
-            rbuf_put(&uart->rxbuf, buffer_char);
+            rbuf_put(recieveBuffer, buffer_char);
             condition_broadcast(&uart->rxbuf_not_empty);
         }
         else
@@ -370,11 +372,12 @@ static void uart_isr(int irqno, void *aux)
             uart->regs->ier &= ~IER_DRIE;
         }
     }
+    struct ringbuf *transmitBuffer = &uart->txbuf;
     // Ensure THR is empty and there is data to send
-    if ((line_status & LSR_THRE) && (!rbuf_empty(&uart->txbuf)))
+    if ((line_status & LSR_THRE) && (!rbuf_empty(transmitBuffer)))
     {
         // Send the next character from transmit buffer
-        uart->regs->thr = rbuf_get(&uart->txbuf);
+        uart->regs->thr = rbuf_get(transmitBuffer);
         condition_broadcast(&uart->txbuf_not_full);
     }
     // Disable Interrupt if THR is empty and no data to send.
