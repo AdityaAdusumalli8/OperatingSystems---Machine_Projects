@@ -1,0 +1,33 @@
+Final grade: 80 / 80
+Log:
+qemu-system-riscv64 -machine virt -bios none -kernel cp1.elf -m 8M -serial mon:stdio -serial pty -nographic
+char device redirected to /dev/pts/21 (label serial1)
+SECTION: test_com1_init
+GRADE: test_com1_init: 0
+REPORT: test_com1_init: Success
+SECTION: test_com1_putc
+GRADE: test_com1_putc: 0
+REPORT: test_com1_putc: Success
+SECTION: test_com1_getc
+GRADE: test_com1_getc: 0
+REPORT: test_com1_getc: Success
+SECTION: test_uart1_isr
+GRADE: test_uart1_isr: 0
+REPORT: test_uart1_isr: Success
+SECTION: test_plic_clm_ctx_int
+GRADE: test_plic_clm_ctx_int: 1
+SECTION: test_plic_cmplt_ctx_int
+GRADE: test_plic_cmplt_ctx_int: 6
+SECTION: test_plic_ctx_thres
+GRADE: test_plic_ctx_thres: 8
+SECTION: test_plic_enb_src_fr_ctx
+GRADE: test_plic_enb_src_fr_ctx: 8
+SECTION: test_plic_dis_src_fr_ctx
+GRADE: test_plic_dis_src_fr_ctx: 1
+SECTION: test_plic_src_pending
+GRADE: test_plic_src_pending: 6
+SECTION: test_plic_src_priority
+GRADE: test_plic_src_priority: 6
+SECTION: test_extern_intr_handler
+GRADE: test_extern_intr_handler: 0
+REPORT: test_extern_intr_handler: Success
